@@ -1,0 +1,522 @@
+---
+title: " Lending Club FlexDashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(plotly)
+library(ggplot2)
+library(tidyverse)
+library(choroplethrMaps, quietly = TRUE)
+library(choroplethr, quietly = TRUE)
+```
+
+
+
+```{r data}
+
+bcl<-read.csv("https://raw.githubusercontent.com/rk2991/sta553/main/data/LendingDataset.csv")
+x.names = names(bcl)
+y.names =names(bcl)
+y1.names =names(bcl)
+
+#loan_status = unique(bcl$loan_status)
+```
+
+
+
+
+
+Sidebar {.sidebar data-width=200}
+==================================
+
+
+
+
+\
+<hr>
+
+
+```{r}
+      helpText(
+        "This selection corresponds to all tabs"
+      )
+radioButtons("loan_status", " Loan Status",
+                   c("Charged Off",
+                    "Fully Paid","Current","In Grace Period","Late (16-30 days)","Late (31-120 days)",
+                     "all"),
+                  inline = FALSE,
+                selected = "all")
+
+     
+```
+
+<hr>
+
+```{r}
+
+selectInput(inputId="Y", 
+            label = strong("Response Variable: Y"), 
+            choices = y.names[c(6,22,2)],
+             selected = x.names[6])
+
+selectInput(inputId="X", 
+            label = strong("Predictor Variable: X"), 
+            choices = x.names[c(2,6,22,26)], 
+            selected = x.names[26])
+
+selectInput(inputId="X1", 
+            label = strong("Select Categorical variable (X) for the Bar Plot in Descriptive Statistics tab"), 
+            choices = y1.names[c(5,8,9,12,18)], 
+            selected = x.names[5]
+            )
+
+
+
+numericInput(inputId="newX", 
+             label=strong("New Value for Prediction:"), 
+             value=700, 
+             min=1, 
+             max=6500)
+
+
+```
+
+
+\
+
+<hr>
+
+
+<center><img src="https://github.com/pengdsci/sta553/blob/main/image/goldenRamLogo.png?raw=true" width="80" height="80"></center>
+<p style="font-family:Courier; color:Red; font-size: 20px;"><center>
+                 <font size =2> <a href="mailto:rk966746@wcupa.edu">
+                 <font color="purple">Report bugs to Rashmi Kalra </font></a> </font></center></p>
+        
+
+
+```{r}
+
+ workDat = function(){
+      if (input$loan_status == "Charged Off") {
+          workingData = bcl[which(bcl$loan_status == "Charged Off"),]
+      } else if (input$loan_status == "Fully Paid") {
+          workingData = bcl[which(bcl$loan_status == "Fully Paid"),]
+      } else if (input$loan_status == "Current") {
+          workingData = bcl[which(bcl$loan_status == "Current"),]
+      } else if (input$loan_status == "In Grace Period") {
+          workingData = bcl[which(bcl$loan_status == "In Grace Period"),]   
+          } else if (input$loan_status == "Late (16-30 days)") {
+          workingData = bcl[which(bcl$loan_status == "Late (16-30 days)"),]
+      } else if (input$loan_status == "Late (31-120 days)") {
+          workingData = bcl[which(bcl$loan_status =="Late (31-120 days)"),]
+          
+
+      } else {
+          workingData = bcl
+      }
+   workingData 
+  }
+  
+
+```
+Introduction
+=====================================  
+
+
+<right><img src="https://raw.githubusercontent.com/rk2991/sta553/main/Images/lendingclub-logo-freelogovectors.net_.png" width="200" height="50"><right>
+<p style="font-family:Courier; color:Red; font-size: 20px;"><right>
+'\
+
+## Lending Club Loan Dashboard
+
+
+        
+**Introduction:**
+Lending Club is a US peer-to-peer lending company, headquartered in San Francisco, California.It was the first peer-to-peer lender to register its offerings as securities with the Securities and Exchange Commission (SEC), and to offer loan trading on a secondary market. Lending Club operates an online lending platform that enables borrowers to obtain a loan, and investors to purchase notes backed by payments made on loans. Lending Club is the world’s largest peer-to-peer lending platform. It reduces the cost of lending and borrowing for individuals with advanced data analytics. The function of peer-to-peer companies is to match people who have money with people who want to borrow money. As a leader in this industry, LC completed its initial public offering in December 2014, which significantly improved public trust in this fast-growing company. In this project, we will explore data published by Lending Club and try to dig out some inspiring and valuable insights.
+
+
+\
+
+**Data:**
+The Lending Club Loan Data contains complete loan data for all loans issued through the 2007-2015,including the current loan status (Current, Late, Fully Paid, etc.) and latest payment information. The file containing loan data through the “present” contains complete loan data for all loans issued through the previous completed calendar quarter. Additional features include credit scores, number of finance inquiries, address including zip codes, and state, and collections among others. The file is a matrix of about 890 thousand observations and 74 variables. The size of this dataset is about 421M.For the visualization purpose we have selected the random sample of 50k observations.
+
+
+\
+
+**Data Dictionary:**
+<left>Data Dictionary has meaning and definitions of all the terms used. The data dictionary can be accessed by clicking the link :<left>
+<a href="https://view.officeapps.live.com/op/view.aspx?src=https%3A%2F%2Fraw.githubusercontent.com%2Frk2991%2Fsta553%2Fmain%2Fdata%2FData_Dictionary.xlsx&wdOrigin=BROWSELINK">Data Dictionary</a> </li>
+<br>
+
+\
+
+
+**Dashboard Layout:**
+Sidebar Panel has radio buttons for the Loan Status and drop down list to select the numeric X and Y variable for the Linear Regression Model Purpose. It also has drop down to select the categorical variable to see the relationship between different charts present in Descriptive Statistics tab .There are different tabs we can see on the top: \
+
+* Descriptive Statistics to see the distribution of variables - Scatter Plot, Bar Plot, ChoroPleth Map, Density Plot
+* Inferential Analysis for the Regression Model-Regression, Model Equation, Residual Plots, Prediction
+* Summary and Findings.
+
+
+
+
+Descriptive Statistics
+=====================================  
+
+   
+Row {data-height=600 .tabset .tabset-fade}
+-------------------------------------
+
+
+### **Scatter Plot** 
+```{r}
+renderPlotly({
+# hist(workDat()[[input$X]]) 
+plot_ly(data = workDat(),
+        x =  ~workDat()[[input$X]], 
+        y =  ~workDat()[[input$Y]], 
+        color = ~workDat()$loan_status, 
+        hovertemplate = paste('<i><b>',input$Y,'<b></i>: %{y}',
+                             '<br><b>',input$X,'</b>:  %{x}'
+                            ),
+        alpha  = 0.6,
+        size = ~workDat()[[input$Y]],
+        type = "scatter",
+        mode = "markers")   %>%
+    layout(title = list( text = paste("<b>Relationship between",
+                                             input$Y, "and", input$X, "</b>"),
+                                font = list( size = 15,
+                                             color = "darkred") ), 
+           plot_bgcolor = "#e5ecf6",
+           margin = list(l = 20, r = 20, b = 80, t = 30),
+           xaxis = list(title = paste(input$X)), 
+           yaxis = list(title = paste(input$Y))
+                 #legend = list(title=list(text='<b> Loan Status </b>'),
+                  #       orientation = "h",   # show entries horizontally
+                   #      xanchor = "center",  # use center of legend as anchor
+                    #     x = 0.5)             # put legend in center of x-axis
+        )
+  })
+```
+
+
+
+### **Bar Plot** 
+```{r}
+
+renderPlotly({
+plot_ly(
+data = workDat(),
+  x = ~workDat()[[input$X1]],
+   y = ~workDat()[[input$Y]],
+color=~loan_status,
+hovertemplate = paste('<i><b>',input$Y,'<b></i>: %{y}',
+                             '<br><b>',input$X1,'</b>:  %{x}',
+                      '<br><b>',workDat()$loan_status,'</b>:  %{x}'
+                            ),
+
+   type = "bar") %>%
+    layout( yaxis = list(title =paste(input$Y)),
+            xaxis = list(title = paste(input$X1)),
+           title = list( text = paste("<b>Relationship between",
+                                             input$Y, "and", input$X1, "</b>"),
+                                font = list( size = 15,
+                                             color = "darkred") ), barmode = "stack")
+  
+  })
+
+```
+
+### **ChoroPleth Map **
+
+```{r}
+
+# Create data frame
+state_pop <- read.csv("https://raw.githubusercontent.com/rk2991/sta553/main/data/LendingDataset.csv")
+
+
+state_pop<-state_pop %>%
+  group_by(addr_state) %>%
+  summarise(Freq = sum(loan_amnt))
+
+
+# Create hover text
+state_pop$hover <- with(state_pop, 
+                        paste('<br>', "Loan Amount:", Freq,
+                              '<br>', "State:", addr_state
+                            ))
+# Make state borders white
+borders <- list(color = toRGB("red"))
+# Set up some mapping options
+map_options <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+renderPlotly({
+plot_ly(z = ~state_pop$Freq, 
+        text = ~state_pop$hover, 
+        locations = ~state_pop$addr_state, 
+        type = 'choropleth', 
+        locationmode = 'USA-states', 
+        color = state_pop$Freq, 
+        colors = 'YlOrRd', 
+        marker = list(line = borders)) %>%
+  layout(title = list( text = paste("Total Loan Amount Issued in States"),
+                                font = list( size = 15,
+                                             color = "darkred") ), geo = map_options)
+
+})
+```
+
+
+
+### **Density Plot **
+
+```{r}
+renderPlotly({
+  if(input$loan_status == "all"){
+    sepal.len.FP <- bcl[which(bcl$loan_status == "Fully Paid"),]
+    FP <- density(sepal.len.FP$annual_inc)
+    sepal.len.CO <- bcl[which(bcl$loan_status == "Charged Off"),]
+    CO <- density(sepal.len.CO$annual_inc)
+    sepal.len.Curr <- bcl[which(bcl$loan_status == "Current"),]
+    Curr <- density(sepal.len.Curr$annual_inc)
+    
+    sepal.len.IGP <- bcl[which(bcl$loan_status == "In Grace Period"),]
+    IGP <- density(sepal.len.IGP$annual_inc)
+    
+    sepal.len.l1<- bcl[which(bcl$loan_status == "Late (16-30 days)"),]
+    l1 <- density(sepal.len.l1$annual_inc)
+    
+    sepal.len.l2 <- bcl[which(bcl$loan_status == "Late (31-120 days)"),]
+    l2 <- density(sepal.len.l2$annual_inc)
+
+    # plot density curves
+    plot_ly(x = ~CO$x, y = ~CO$y, 
+               type = 'scatter', 
+               mode = 'lines', 
+               name = 'Charged Off', 
+               fill = 'tozeroy')  %>% 
+           # adding more density curves
+       add_trace(x = ~FP$x, 
+                 y = ~FP$y, 
+                 name = 'Fully Paid', 
+                 fill = 'tozeroy')  %>% 
+      add_trace(x = ~Curr$x, 
+                 y = ~Curr$y, 
+                 name = 'Current', 
+                 fill = 'tozeroy')  %>% 
+        add_trace(x = ~IGP$x, 
+                 y = ~IGP$y, 
+                 name = 'In Grace Period', 
+                 fill = 'tozeroy')  %>% 
+        add_trace(x = ~l1$x, 
+                 y = ~l1$y, 
+                 name = 'Late (16-30 days)', 
+                 fill = 'tozeroy')  %>% 
+        add_trace(x = ~l2$x, 
+                 y = ~l2$y, 
+                 name = 'Late (31-120 days)', 
+                 fill = 'tozeroy')  %>% 
+       
+       layout(xaxis = list(title = paste(input$Y)),
+              yaxis = list(title = 'Density'))
+    } else {
+      den <- density(workDat()[[input$Y]])
+     plot_ly(x = ~den$x, 
+             y = ~den$y, 
+          color = ~input$loan_status, 
+          type = 'scatter', 
+          mode = 'lines', 
+          name = input$loan_status, 
+          fill = 'tozeroy')    %>%
+      layout(xaxis = list(title = paste(input$Y)),
+             yaxis = list(title = 'Density'),
+             title = list( text = paste("<b>Distribution of",
+                                             input$Y, "by", 'Annual Income', "</b>"),
+                                font = list( size = 15,
+                                             color = "darkred") )
+             )
+    }
+  
+  
+})
+```
+
+
+
+
+
+
+Inferential Analysis {data-orientation=rows}
+=====================================     
+   
+Row {data-height=600 .tabset .tabset-fade}
+-------------------------------------
+
+### **Regression**
+
+```{r}
+renderPlot({
+  regdata = workDat()
+  if (input$loan_status == "all"){
+    m0 = lm(bcl[[input$Y]]~bcl[[input$X]])
+    plot(bcl[[input$X]], bcl[[input$Y]],
+      main = "",
+      type = "p",
+      pch = 19,
+      col = "blue",
+      xlab = input$X,
+      ylab = input$Y
+      )
+    abline(m0, lwd = 2, col = "red")
+  } else {
+    m1 = lm(workDat()[[input$Y]]~workDat()[[input$X]])
+    plot(workDat()[[input$X]], workDat()[[input$Y]],
+      main = "",
+      type = "p",
+      pch = 19,
+      col = "blue",
+      xlab = input$X,
+      ylab = input$Y
+      )
+    abline(m1, lwd = 2, col = "red")    
+  }
+})
+
+```
+
+### **Model Equation**
+
+```{r}
+
+
+renderTable({
+    br()
+    br()
+    dataset = workDat()  # define the working data set
+    m0 = lm(dataset[,input$Y] ~ dataset[,input$X])
+    #summary(m0)
+    regcoef = data.frame(coef(summary(m0)))
+    regcoef$Pvalue = regcoef[,names(regcoef)[4]]
+    ###
+    regcoef$Variable = c("Intercept", input$X)
+    regcoef[,c(6, 1:3, 5)]
+  })
+```
+
+
+### **Residual Plots**
+
+```{r}
+renderPlot({
+  regdata = workDat()
+  if (input$loan_status== "all"){
+    LM = lm(bcl[[input$Y]]~bcl[[input$X]])
+  } else {
+    LM = lm(workDat()[[input$Y]]~workDat()[[input$X]])
+  }
+  par(mfrow = c(2,2))
+  plot(LM)
+})
+
+##
+
+```
+
+### **Prediction**
+
+```{r}
+renderPlot({
+    dataset = workDat()   # define the working data set
+
+    ###
+    m3 = lm(dataset[,input$Y] ~ dataset[,input$X])
+
+    pred.y = coef(m3)[1] + coef(m3)[2]*input$newX
+         #####
+    plot(dataset[,input$X], dataset[,input$Y], 
+    xlab = input$X,
+         ylab = input$Y,
+        
+         main = paste("Relationship between", input$Y, "and", input$X)
+       )
+        ## adding a regression line to the plot
+     abline(m3,
+            col = "red",
+            lwd = 1,
+            lty=2)
+    points(input$newX, pred.y, pch = 19, col = "red", cex = 2)
+  })
+```
+
+
+
+
+Summary and Findings{data-orientation=rows}
+===================================== 
+
+
+Row {data-height=600}
+-----------------------------------
+### Descriptive Statistics Findings
+
+Descriptive Statistics show the various Plots:
+
+**Scatter Plot**: From Scatter plot we can see the relationship between different numerical variables. The most important relationship we see is between the FICO Score and interest rate. As the FICO score increases , the interest rate decreases.
+
+**Bar Plots**: It represent the relationship between one categorical and one numerical variable. We can choose any of the variable from the sidebar panel and look at the relationship.Also we have looked the relationship based on the different loan status ( Fully Paid loan vs Charged Off ). The relationship is summarized as:
+
+
+* Term:
+Term is the number of payments on the loan. Values are in months and can be either 36 or 60.
+It is a key driver of risk. This is due to a longer term leaving a longer period for the borrower to fall into financial difficulty, and also indicative of stretch affordability, i.e. a longer term has lower installments, meaning that applicants borrowing a larger proportion of their incomes are more likely to need a longer term.
+
+* Grade:
+The scores that has a lower grade received a larger amounts of loans (which might had contributed to a higher level of risk).Logically,  lower the grade the higher the interest the customer had to pay back to investors.
+Interestingly, customers with a grade of "C" were more likely to default on the loan
+
+* Home ownership:
+The plot shows that most of them living in rented home or mortgaged their home.Applicant numbers are high from these categories so charged off is high too.
+
+
+* Purpose:
+The plot shows that most of the loans were taken for the purpose of debt consolidation & paying credit card bill. Number of charged off count also high too for these loans so the probability is high as a defaulter.
+
+
+
+**Choropleth Map**:
+This show the total loan amount issued in different states. California, Texas, New York and Florida are the states in which the highest amount of loans were issued.California, Texas and New York are all above the average annual income (with the exclusion of Florida), this might give possible indication why most loans are issued in these states.
+
+**Density Plots**:
+Looking at the density Plot for the Interest Rate we see that higher the interest rate is, the more likely for being charged off.Also looking at the density plot for the loan amount it seems that "Charged off" loans seem to have higher loan amount.
+
+Row {data-height=300}
+-------------------------------------
+  
+    
+### Regression Model
+
+
+In the Inferential Statistics tab, there is a regression model and its equation. We can select any of the X and Y variable from the drop down.
+
+Let suppose our Y variable is interest rate and X is FICO. We can see the negative correlation between two and the Model equation for all Loan status present in the dataset is :
+
+Y(int_rate)=53.97-0.06 * X(fico)
+
+Similarly we can plot it for different variables.
+
+We also have the two more tabs :
+The Residual plots showing the residual data distributions.
+The Prediction scatter plot showing the predicted value of response variable for selected value of independent variable
+
